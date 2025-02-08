@@ -1,4 +1,3 @@
-// ColoredPoint.js (c) 2012 matsuda
 // Vertex shader program
 var VSHADER_SOURCE =`
   precision mediump float;
@@ -26,18 +25,12 @@ var FSHADER_SOURCE =`
 
     if(u_whichTexture == -2){
       gl_FragColor = u_FragColor;     //use color
-    
-    }else if (u_whichTexture == -1){
-      gl_FragColor = vec4(v_UV, 1.0, 1.0);    //use UV debug color
-    
+  
     }else if (u_whichTexture == 0){
       gl_FragColor = texture2D(u_Sampler0, v_UV);   //use texture0
     
     }else if (u_whichTexture == 1){
       gl_FragColor = texture2D(u_Sampler1, v_UV);   //use texture1
-    
-    }else{
-      gl_FragColor = vec4(1, 0.2, 0.2, 1);    //Use red Error Color
     }
   }`
 
@@ -47,7 +40,6 @@ var FSHADER_SOURCE =`
   let a_Position;
   let a_UV;
   let u_FragColor;
-  let u_Size;
   let u_ModelMatrix;
   let u_ProjectionMatrix;
   let u_ViewMatrix;
@@ -66,7 +58,7 @@ var FSHADER_SOURCE =`
       console.log('Failed to get the rendering context for WebGL');
       return;
     }
-
+    // Enable the depth test
     gl.enable(gl.DEPTH_TEST);
   }
 
@@ -77,13 +69,14 @@ var FSHADER_SOURCE =`
       return;
     }
 
-    // // Get the storage location of a_Position
+    // Get the storage location of a_Position
     a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     if (a_Position < 0) {
       console.log('Failed to get the storage location of a_Position');
       return;
     }
 
+    // Get the storage location of a_UV
     a_UV = gl.getAttribLocation(gl.program, 'a_UV');
     if (a_UV < 0) {
       console.log('Failed to get the storage location of a_UV');
@@ -114,21 +107,26 @@ var FSHADER_SOURCE =`
       console.log('Failed to get the storage location of u_GlobalRotateMatrix');
       return;
     }
+
+    //Set an initial val for this matrix to identity
     var identityM = new Matrix4();
     gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, identityM.elements);
   
+    // Get the storage location of u_ViewMatrix
     u_ViewMatrix = gl.getUniformLocation(gl.program, 'u_ViewMatrix');
     if (!u_ViewMatrix) {
       console.log('Failed to get the storage location of u_ViewMatrix');
       return;
     }
 
+    // Get the storage location of u_ProjectionMatrix
     u_ProjectionMatrix = gl.getUniformLocation(gl.program, 'u_ProjectionMatrix');
     if (!u_ProjectionMatrix) {
       console.log('Failed to get the storage location of u_ProjectionMatrix');
       return;
     }
 
+    // Get the storage location of u_Samplers
     u_Sampler0 = gl.getUniformLocation(gl.program, 'u_Sampler0');
     if (!u_Sampler0) {
       console.log('Failed to get the storage location of u_Sampler0');
@@ -138,6 +136,13 @@ var FSHADER_SOURCE =`
     u_Sampler1 = gl.getUniformLocation(gl.program, 'u_Sampler1');
     if (!u_Sampler1) {
       console.log('Failed to get the storage location of u_Sampler1');
+      return;
+    }
+
+    // Get the storage location of u_whichTexture
+    u_whichTexture = gl.getUniformLocation(gl.program, 'u_whichTexture');
+    if (!u_whichTexture) {
+      console.log('Failed to get the storage location of u_whichTexture');
       return;
     }
   }
@@ -164,58 +169,50 @@ var FSHADER_SOURCE =`
   // Set up actions for HTML UI elements
   function addActionsForHtmlUI(){
     // Slider Events
-    document.getElementById('angleSlide').addEventListener('mousemove', function() { g_sliderAngle = this.value; renderAllShapes(); });
-    document.getElementById('headSlide').addEventListener('mousemove', function() { g_headAngle = this.value; renderAllShapes(); });
-    document.getElementById('bodySlide').addEventListener('mousemove', function() { g_bodyAngle = this.value; renderAllShapes(); });
-    document.getElementById('buttSlide').addEventListener('mousemove', function() { g_buttAngle = this.value; renderAllShapes(); });
-    document.getElementById('wingSlide').addEventListener('mousemove', function() { g_WingAngle = this.value; renderAllShapes(); });
-    document.getElementById('leg1Slide').addEventListener('mousemove', function() { g_leg1Angle = this.value; renderAllShapes(); });
+    document.getElementById('speedSlide').addEventListener('mousemove', function() { g_headAngle = this.value; renderAllShapes(); });
+    document.getElementById('volumeSlide').addEventListener('mousemove', function() { g_bodyAngle = this.value; renderAllShapes(); });
+    document.getElementById('brightnessSlide').addEventListener('mousemove', function() { g_buttAngle = this.value; renderAllShapes(); });
     
     //Animation Events
-    document.getElementById("headAniOnButton").onclick = function() { g_headAnimation = true; };
-    document.getElementById("headAniOffButton").onclick = function() { g_headAnimation = false; };
-    
-    document.getElementById("bodyAniOnButton").onclick = function() { g_bodyAnimation = true; };
-    document.getElementById("bodyAniOffButton").onclick = function() { g_bodyAnimation = false; };
-    
-    document.getElementById("buttAniOnButton").onclick = function() { g_buttAnimation = true; };
-    document.getElementById("buttAniOffButton").onclick = function() { g_buttAnimation = false; };
-    
-    document.getElementById("wingsAniOnButton").onclick = function() { g_wingsAnimation = true; };
-    document.getElementById("wingsAniOffButton").onclick = function() { g_wingsAnimation = false; };
-  
-    document.getElementById("legsAniOnButton").onclick = function() { g_legsAnimation = true; };
-    document.getElementById("legsAniOffButton").onclick = function() { g_legsAnimation = false; };
+    document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
+    document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };
+    document.getElementById("monsterAniOnButton").onclick = function() { g_bodyAnimation = true; };
+    document.getElementById("monsterAniOffButton").onclick = function() { g_bodyAnimation = false; };
   }
 
   function initTextures() {
     //Create Texture0
-    var image = new Image();  // Create the image object
-    if (!image) {
+    var floorImage = new Image();  // Create the image object
+    if (!floorImage) {
       console.log('Failed to create the image object');
       return false;
     }
     // Register the event handler to be called on loading an image
-    image.onload = function(){ sendImageToTEXTURE0(image); };
+    floorImage.onload = function(){ 
+      console.log("Floor texture Loaded", floorImage);
+      sendImageToTEXTURE0(floorImage); 
+    };
     // Tell the browser to load an image
-    image.src = './textures/grass.jpg';
+    floorImage.src = './textures/floor.jpg';
 
     //Create Texture1
-    var image1 = new Image();  // Create the image object
-    if (!image1) {
+    var wallImage = new Image();  // Create the image object
+    if (!wallImage) {
       console.log('Failed to create the image object');
       return false;
     }
     // Register the event handler to be called on loading an image
-    image1.onload = function(){ sendImageToTEXTURE1(image1); };
+    wallImage.onload = function(){ 
+      console.log("Wall texture Loaded", wallImage);
+      sendImageToTEXTURE1(wallImage); 
+    };
     // Tell the browser to load an image
-    image1.src = './textures/floor.jpg';
+    wallImage.src = './textures/grass.jpg';
   
     return true;
   }
   let texture, texture1;
-  function sendImageToTEXTURE0(image) {
-    
+  function sendImageToTEXTURE0(floorImage) {
     texture = gl.createTexture();   // Create a texture object
     if (!texture) {
       console.log('Failed to create the texture object');
@@ -224,6 +221,8 @@ var FSHADER_SOURCE =`
     
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip the image's y axis
     // Enable texture unit0
+    console.log("Applying Floor Texture...");
+
     gl.activeTexture(gl.TEXTURE0);
     // Bind the texture object to the target
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -231,25 +230,29 @@ var FSHADER_SOURCE =`
     // Set the texture parameters
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // Set the texture image
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, floorImage);
     
     // Set the texture unit 0 to the sampler
+    console.log("Binding Floor Texture to Sampler0");
     gl.uniform1i(u_Sampler0, 0);
     console.log('Finished setting texture0');
   }
 
     //Create Texture1
-    function sendImageToTEXTURE1(image1){
+    function sendImageToTEXTURE1(wallImage){
+      
       texture1 = gl.createTexture();   // Create a texture object
       if (!texture1) {
         console.log('Failed to create the texture object');
         return false;
       }
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
+      console.log("Applying Wall Texture...");
+
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, texture1);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image1);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, wallImage);
       gl.uniform1i(u_Sampler1, 1);
       console.log('Finished setting texture1');
   }
@@ -333,7 +336,7 @@ function renderScene(){
   bodyMatrix.translate(-0.25, 0, 0.02);
   bodyMatrix.rotate(g_bodyAngle, 1, 0, 0);
   var body = new Cube(new Matrix4(bodyMatrix), [0.5, 0.35, 0.05, 1.0]);
-  body.textureNum = -2;
+
   body.matrix.scale(0.3, 0.3, 0.3);
   body.render();
 
@@ -350,8 +353,12 @@ function renderScene(){
   headMatrix.translate(0, 0, -0.01);
   headMatrix.rotate(g_headAngle, 1, 0, 0);
 
-  var head = new Cube(new Matrix4(headMatrix), [1.0, 1.0, 0, 1.0]);
+  var head = new Cube(new Matrix4(headMatrix), [1.0, 1.0, 0, 1.0], 1);
   head.matrix.scale(0.3, 0.3, 0.3);
+  gl.activeTexture(gl.TEXTURE1);
+gl.bindTexture(gl.TEXTURE_2D, texture1);
+gl.uniform1i(u_Sampler1, 1);
+
   head.render();
 
   // Draw Butt
@@ -383,15 +390,6 @@ function renderScene(){
   wingR.matrix.scale(0.1, 0.3, 0.3);
   wingR.render();
 
-  //Draw Stinger Cone
-  var stinger = new Cone();
-  stinger.color = [.211, .211, .211, 1.0];
-  stinger.matrix = buttCoordinateMat;
-  stinger.matrix.translate(0.2, 0.15, 0.30);
-  stinger.matrix.rotate(90, 1, 0, 0);
-  stinger.matrix.scale(0.15, 0.15, 0.15);
-  stinger.render();
-
   // Draw Legs
   var legLMatrix = new Matrix4(bodyCoordinateMat4);
   legLMatrix.translate(0.2, -0.10, 0.0);
@@ -410,29 +408,31 @@ function renderScene(){
   legR.render();
 
   //Draw Background 
+  //Draw Sky
+  var skyMatrix = new Matrix4();
+  skyMatrix.scale(50, 50, 50);
+  skyMatrix.translate(-0.5, -0.5, -0.5);
+  var sky = new Cube(skyMatrix, [0.6, 0.8, 1.0, 1.0], -2);
+  gl.uniform1i(u_whichTexture, sky.textureNum);
+  sky.render();
+  
   //Draw Floor
   
   var floorMatrix = new Matrix4();
   floorMatrix.translate(0, -0.75, 0);
   floorMatrix.scale(10, 0, 10);
-  var floor = new Cube(floorMatrix, [0.0, 1.0, 0.0, 1.0]);
-  floor.textureNum = 1;
-  
+  var floor = new Cube(floorMatrix, [0.0, 1.0, 0.0, 1.0], 0);
   floor.matrix.translate(-0.5, 0.1, -0.5);
+  console.log("Rendering Cube - Color:", this.color, "TextureNum:", this.textureNum);
+
   floor.render();
 
 
-  //Draw Sky
-  var skyMatrix = new Matrix4();
-  skyMatrix.scale(50, 50, 50);
-  skyMatrix.translate(-0.5, -0.5, -0.5);
-  var sky = new Cube(skyMatrix, [1.0, 0.0, 0.0, 1.0]);
-  sky.textureNum = -2;
-  sky.render();
 
-  //Draw Walls
   
 
+
+  //Draw Walls
 }
 
 function keydown(ev) {
@@ -552,4 +552,4 @@ function mouseControl() {
       }
   };
 }
-
+  
