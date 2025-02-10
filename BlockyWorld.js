@@ -16,23 +16,35 @@ var VSHADER_SOURCE =`
 // Fragment shader program
 var FSHADER_SOURCE =`
   precision mediump float;
-  varying vec2 v_UV;
-  uniform vec4 u_FragColor;
-  uniform sampler2D u_Sampler0;
-  uniform sampler2D u_Sampler1;
-  uniform int u_whichTexture;
-  void main() {
+varying vec2 v_UV;
+uniform vec4 u_FragColor;
+uniform float u_Brightness;
+uniform sampler2D u_Sampler0;
+uniform sampler2D u_Sampler1;
+uniform int u_whichTexture;
 
-    if(u_whichTexture == -2){
-      gl_FragColor = u_FragColor;     //use color
-  
-    }else if (u_whichTexture == 0){
-      gl_FragColor = texture2D(u_Sampler0, v_UV);   //use texture0
-    
-    }else if (u_whichTexture == 1){
-      gl_FragColor = texture2D(u_Sampler1, v_UV);   //use texture1
+void main() {
+    vec4 color;
+
+    if (u_whichTexture == -2) {
+        color = u_FragColor;     // Use solid color
+    } else if (u_whichTexture == 0) {
+        color = texture2D(u_Sampler0, v_UV);   // Use texture 0
+    } else if (u_whichTexture == 1) {
+        color = texture2D(u_Sampler1, v_UV);   // Use texture 1
+    } else {
+        color = vec4(1.0, 1.0, 1.0, 1.0); // Default white
     }
-  }`
+
+    // Convert to grayscale intensity
+    float intensity = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+
+    // Apply brightness effect (0 = grayscale, 1 = full color)
+    color.rgb = mix(vec3(intensity), color.rgb, u_Brightness);
+
+    gl_FragColor = color;
+}`
+
 
   // Global Variables
   let canvas;
@@ -145,12 +157,21 @@ var FSHADER_SOURCE =`
       console.log('Failed to get the storage location of u_whichTexture');
       return;
     }
+
+    u_Brightness = gl.getUniformLocation(gl.program, 'u_Brightness');
+    if (!u_Brightness) {
+        console.log('Failed to get the storage location of u_Brightness');
+        return;
+    }
+    gl.uniform1f(u_Brightness, 1.0); // Default brightness (1.0 = normal color)
+
   }
 
   //Global Variables related to UI Elements
   let g_sliderAngle = 0;
   let g_mouseAngle = 0;
   let lastMouseX = 0;
+  let u_Brightness;
 
   // Animal Variables
   let g_headAngle = 0;
@@ -176,8 +197,14 @@ var FSHADER_SOURCE =`
       let volumeValue = parseFloat(this.value) / 100; // Convert to 0.0 - 1.0
       music.volume = volumeValue;    
     });
-    document.getElementById('brightnessSlide').addEventListener('mousemove', function() { g_buttAngle = this.value; renderAllShapes(); });
-    
+    document.getElementById('brightnessSlide').addEventListener('input', function() { 
+      let brightnessValue = parseFloat(this.value); // No need to divide
+      gl.uniform1f(u_Brightness, brightnessValue);
+      console.log("Brightness updated:", brightnessValue);
+      renderAllShapes();
+  });
+  
+      
     //Animation Events
     document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
     document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };

@@ -6,7 +6,6 @@ class Cube {
       this.textureNum = textureNum;
   }
 
-
   render() {
       const rgba = this.color;
 
@@ -18,13 +17,8 @@ class Cube {
       }
 
       // Pass the color of a point to u_FragColor variable
-      console.log("Setting u_FragColor to:", rgba);
-
       gl.uniform4f(u_FragColor, rgba[0], rgba[1], rgba[2], rgba[3]);
       gl.uniformMatrix4fv(u_ModelMatrix, false, this.matrix.elements);
-      console.log("Rendering Cube - Color:", this.color, "TextureNum:", this.textureNum);
-
-      
 
       if (this.textureNum >= 0) { 
         //Note:
