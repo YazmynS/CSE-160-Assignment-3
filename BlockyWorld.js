@@ -59,6 +59,7 @@ void main() {
   let u_Sampler0;
   let u_Sampler1;
   let u_whichTexture;
+  let u_Brightness;
 
   function setUpGL(){
     // Retrieve <canvas> element
@@ -171,7 +172,13 @@ void main() {
   let g_sliderAngle = 0;
   let g_mouseAngle = 0;
   let lastMouseX = 0;
-  let u_Brightness;
+  let g_speed = 0.2;
+  
+  // Camera Variables 
+  var g_camera = new Camera();
+  var g_eye = [0,0,3];
+  var g_at = [0,0,-100];
+  var g_up = [0,1,0];
 
   // Animal Variables
   let g_headAngle = 0;
@@ -191,8 +198,11 @@ void main() {
   // Set up actions for HTML UI elements
   function addActionsForHtmlUI(){
     // Slider Events
-    document.getElementById('speedSlide').addEventListener('mousemove', function() { g_headAngle = this.value; renderAllShapes(); });
-    document.getElementById('volumeSlide').addEventListener('input', function(){
+    document.getElementById('speedSlide').addEventListener('input', function() {
+      g_speed = parseFloat(this.value); // Scale down if needed
+      console.log("Speed updated:", g_speed);
+    });    
+      document.getElementById('volumeSlide').addEventListener('input', function(){
       let music = document.getElementById('music');
       let volumeValue = parseFloat(this.value) / 100; // Convert to 0.0 - 1.0
       music.volume = volumeValue;    
@@ -200,7 +210,6 @@ void main() {
     document.getElementById('brightnessSlide').addEventListener('input', function() { 
       let brightnessValue = parseFloat(this.value); // No need to divide
       gl.uniform1f(u_Brightness, brightnessValue);
-      console.log("Brightness updated:", brightnessValue);
       renderAllShapes();
   });
   
@@ -486,54 +495,34 @@ function drawMap(){
 }
 
 function keydown(ev) {
-  let speed = 0.2;  // Movement speed
-  let rotationSpeed = 5; // Rotation angle in degrees
+  let speed = g_speed;
+  let rotationSpeed = 5;
 
-  // Calculate forward direction based on the current view direction
-  let forwardX = g_at[0] - g_eye[0];
-  let forwardZ = g_at[2] - g_eye[2];
-
-  // Normalize the forward vector
-  let length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
-  if (length > 0) {
-      forwardX /= length;
-      forwardZ /= length;
-  }
-
-  // Compute right direction (perpendicular to forward)
-  let rightX = -forwardZ;
-  let rightZ = forwardX;
-
-  let nextX = g_eye[0];
-  let nextZ = g_eye[2];
+  // Store previous position before moving
+  let prevEye = [...g_camera.eye];
 
   if (ev.keyCode == 87) { // 'W' key (Move Forward)
-      nextX += forwardX * speed;
-      nextZ += forwardZ * speed;
+      g_camera.forward(speed);
   }
   else if (ev.keyCode == 83) { // 'S' key (Move Backward)
-      nextX -= forwardX * speed;
-      nextZ -= forwardZ * speed;
-  }
-  else if (ev.keyCode == 68) { // 'D' key (Move Right)
-      nextX += rightX * speed;
-      nextZ += rightZ * speed;
+      g_camera.back(speed);
   }
   else if (ev.keyCode == 65) { // 'A' key (Move Left)
-      nextX -= rightX * speed;
-      nextZ -= rightZ * speed;
+      g_camera.left(speed);
+  }
+  else if (ev.keyCode == 68) { // 'D' key (Move Right)
+      g_camera.right(speed);
   }
   else if (ev.keyCode == 81) { // 'Q' key (Turn Left)
-      rotateView(-rotationSpeed);
+      g_camera.rotate(-rotationSpeed);
   }
   else if (ev.keyCode == 69) { // 'E' key (Turn Right)
-      rotateView(rotationSpeed);
+      g_camera.rotate(rotationSpeed);
   }
 
-  // Only update position if no collision is detected
-  if (!checkCollision(nextX, nextZ)) {
-      g_eye[0] = nextX;
-      g_eye[2] = nextZ;
+  // **Collision Check**
+  if (checkCollision(g_camera.eye[0], g_camera.eye[2])) {
+      g_camera.eye = prevEye; // Reset to previous position if collision detected
   }
 
   renderAllShapes();
@@ -541,15 +530,7 @@ function keydown(ev) {
 
 
 
-
-
 //Improve Efficency with smaller fewer cubes
-
-var g_camera = new Camera();
-var g_eye = [0,0,3];
-var g_at = [0,0,-100];
-var g_up = [0,1,0];
-
 function renderAllShapes(){
   // Check the time at the start of this function
   var startTime = performance.now();
@@ -560,24 +541,19 @@ function renderAllShapes(){
   gl.uniformMatrix4fv(u_ProjectionMatrix, false, projMat.elements);
 
   // Pass the view matrix
-  var viewMat = new Matrix4();
-  viewMat.setLookAt(g_eye[0], g_eye[1], g_eye[2], g_at[0], g_at[1], g_at[2], g_up[0], g_up[1], g_up[2]);
-  
-  /*viewMat.setLookAt(
-    g_camera.eye.x, g_camera.eye.y, g_camera.eye.z,
-    g_camera.at.x, g_camera.at.y, g_camera.at.z,
-    g_camera.up.x, g_camera.up.y, g_camera.up.z); //(eye, looking at,up)*/
+  var viewMat = new Matrix4();  
+  viewMat.setLookAt(
+    g_camera.eye[0], g_camera.eye[1], g_camera.eye[2],
+    g_camera.at[0], g_camera.at[1], g_camera.at[2],
+    g_camera.up[0], g_camera.up[1], g_camera.up[2]); //(eye, looking at,up)
   gl.uniformMatrix4fv(u_ViewMatrix, false, viewMat.elements);
 
   let totalRotation = g_mouseAngle + g_sliderAngle;
-
   var globalRotMat = new Matrix4();
   globalRotMat.setRotate(totalRotation, 0, 1, 0); // Apply combined rotation
-
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
     
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  
   renderScene();
 
   // Calculate Performance
@@ -620,7 +596,6 @@ function mouseControl() {
   };
 }
 
-
 function checkCollision(nextX, nextZ) {
   // Convert world coordinates to grid indices
   let gridX = Math.floor(nextX + 4);  // Offset since map starts from -4
@@ -650,19 +625,18 @@ function rotateView(angleDegrees) {
   g_at[0] = g_eye[0] + newDx;
   g_at[2] = g_eye[2] + newDz;
 }
+
 function playMusic() {
   let music = document.getElementById('music');
   music.volume = 0.5; // Default volume to 50%
 
   // Try playing the music immediately
-  let playPromise = music.play();
+  let autoPlay = music.play();
 
-  if (playPromise !== undefined) {
-      playPromise.catch(error => {
-          console.log("Autoplay blocked, waiting for user interaction.");
+  if (autoPlay !== undefined) {
+      autoPlay.catch(error => {
           document.body.addEventListener('click', () => {
               music.play();
-              console.log("Music started after user interaction.");
           }, { once: true }); // Ensures it plays on the first click
       });
   }
