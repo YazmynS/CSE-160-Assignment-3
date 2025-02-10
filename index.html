@@ -11,10 +11,11 @@
     </canvas>
     <p>
       <p id="numdot"> XXX</p>
+      <p id="numdot2"> XXX</p>
 
-      Speed <input type="range" min="260" max="276" value="260" class="slider" id="speedSlide">
+      Speed <input type="range" min="0" max="20" value="1" class="slider" id="speedSlide">
       <p>
-      Volume <input type="range" min="0" max="10" value="5" class="slider" id="volumeSlide">
+      Volume <input type="range" min="0" max="100" value="5" step= "1" class="slider" id="volumeSlide">
       <p>
       Brightness <input type="range" min="0" max="20" value="10" class="slider" id="brightnessSlide">
      <p>
@@ -25,6 +26,10 @@
       <button type="button" id="monsterAniOffButton">Off</button>
       <p>
     </p>
+    <audio id="music" loop> 
+      <source src="textures/music.mp3" type="audio/mpeg">
+      Music not supported
+    </audio>
     
 
     <script src="lib/webgl-utils.js"></script>

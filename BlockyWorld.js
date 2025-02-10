@@ -159,7 +159,8 @@ var FSHADER_SOURCE =`
   let g_WingAngle = 0;
   let g_leg1Angle = 0;
 
-  // Animation Variables 
+  // Animation Variables
+  let g_monsterAnimation = false; 
   let g_headAnimation = false;
   let g_bodyAnimation = false;
   let g_buttAnimation = false;
@@ -170,14 +171,18 @@ var FSHADER_SOURCE =`
   function addActionsForHtmlUI(){
     // Slider Events
     document.getElementById('speedSlide').addEventListener('mousemove', function() { g_headAngle = this.value; renderAllShapes(); });
-    document.getElementById('volumeSlide').addEventListener('mousemove', function() { g_bodyAngle = this.value; renderAllShapes(); });
+    document.getElementById('volumeSlide').addEventListener('input', function(){
+      let music = document.getElementById('music');
+      let volumeValue = parseFloat(this.value) / 100; // Convert to 0.0 - 1.0
+      music.volume = volumeValue;    
+    });
     document.getElementById('brightnessSlide').addEventListener('mousemove', function() { g_buttAngle = this.value; renderAllShapes(); });
     
     //Animation Events
     document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
     document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };
-    document.getElementById("monsterAniOnButton").onclick = function() { g_bodyAnimation = true; };
-    document.getElementById("monsterAniOffButton").onclick = function() { g_bodyAnimation = false; };
+    document.getElementById("monsterAniOnButton").onclick = function() { g_monsterAnimation = true; g_headAnimation = true; };
+    document.getElementById("monsterAniOffButton").onclick = function() { g_monsterAnimation = false;  g_headAnimation = false; };
   }
 
   function initTextures() {
@@ -203,7 +208,6 @@ var FSHADER_SOURCE =`
     }
     // Register the event handler to be called on loading an image
     wallImage.onload = function(){ 
-      console.log("Wall texture Loaded", wallImage);
       sendImageToTEXTURE1(wallImage); 
     };
     // Tell the browser to load an image
@@ -215,14 +219,11 @@ var FSHADER_SOURCE =`
   function sendImageToTEXTURE0(floorImage) {
     texture = gl.createTexture();   // Create a texture object
     if (!texture) {
-      console.log('Failed to create the texture object');
       return false;
     }
     
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip the image's y axis
     // Enable texture unit0
-    console.log("Applying Floor Texture...");
-
     gl.activeTexture(gl.TEXTURE0);
     // Bind the texture object to the target
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -233,9 +234,7 @@ var FSHADER_SOURCE =`
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, floorImage);
     
     // Set the texture unit 0 to the sampler
-    console.log("Binding Floor Texture to Sampler0");
     gl.uniform1i(u_Sampler0, 0);
-    console.log('Finished setting texture0');
   }
 
     //Create Texture1
@@ -243,18 +242,14 @@ var FSHADER_SOURCE =`
       
       texture1 = gl.createTexture();   // Create a texture object
       if (!texture1) {
-        console.log('Failed to create the texture object');
         return false;
       }
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-      console.log("Applying Wall Texture...");
-
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, texture1);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, wallImage);
       gl.uniform1i(u_Sampler1, 1);
-      console.log('Finished setting texture1');
   }
 
 function main() {  
@@ -277,6 +272,8 @@ function main() {
 
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+  setTimeout(playMusic, 1000); // Auto-play background music
 
   // get animations
   requestAnimationFrame(tick);
@@ -312,12 +309,19 @@ function convertCoordinatesEventTOGL(ev){
 }
 
 function updateAnimationAngles(){
+  if (g_monsterAnimation){
+    g_bodyAnimation = true;
+    g_wingsAnimation = true;
+    g_legsAnimation = true;
+  }
+
+  
   if (g_headAnimation){
-    g_headAngle = (30 * Math.sin(g_seconds) - 80);
+    g_headAngle = (1 * Math.sin(g_seconds) + 650);
   }
 
   if (g_bodyAnimation){
-    g_bodyAngle = -(30 * Math.sin(g_seconds) + 30);
+    g_bodyAngle = -(20 * Math.sin(g_seconds) + 1);
   }
   if (g_buttAnimation){
     g_buttAngle = (30 * Math.sin(g_seconds) + 30);
@@ -356,8 +360,8 @@ function renderScene(){
   var head = new Cube(new Matrix4(headMatrix), [1.0, 1.0, 0, 1.0], 1);
   head.matrix.scale(0.3, 0.3, 0.3);
   gl.activeTexture(gl.TEXTURE1);
-gl.bindTexture(gl.TEXTURE_2D, texture1);
-gl.uniform1i(u_Sampler1, 1);
+  gl.bindTexture(gl.TEXTURE_2D, texture1);
+  gl.uniform1i(u_Sampler1, 1);
 
   head.render();
 
@@ -423,66 +427,95 @@ gl.uniform1i(u_Sampler1, 1);
   floorMatrix.scale(10, 0, 10);
   var floor = new Cube(floorMatrix, [0.0, 1.0, 0.0, 1.0], 0);
   floor.matrix.translate(-0.5, 0.1, -0.5);
-  console.log("Rendering Cube - Color:", this.color, "TextureNum:", this.textureNum);
-
   floor.render();
 
-
-
-  
-
-
   //Draw Walls
+  drawMap();
 }
-
-function keydown(ev) {
-  let rotationSpeed = 5;
-  let speed = 0.2;
-
-  if (ev.keyCode == 68) { // 'D' key
-    g_eye[0] += speed; // Move right
-  }
-  else if (ev.keyCode == 65) { // 'A' key
-    g_eye[0] -= speed; // Move left
-  }
-  else if (ev.keyCode == 87) { // 'W' key
-    g_eye[2] -= speed; // Move forward
-  }
-  else if (ev.keyCode == 83) { // 'S' key
-    g_eye[2] += speed; // Move backward
-  }
-  else if (ev.keyCode == 81) { // 'Q' key
-    g_sliderAngle -= rotationSpeed;
-  }
-  else if (ev.keyCode == 69) { // 'E' key
-    g_sliderAngle += rotationSpeed;
-  }
-  renderAllShapes();
-}
-
 var g_map = [
   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 1, 1, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 0, 1, 1, 0, 1, 0, 0, 1],
+  [1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+  [1, 0, 1, 0, 1, 1, 0, 1, 1, 1],
+  [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+  [1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
+  [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+  [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
 ]
-
 function drawMap(){
   for (x=0; x<8; x++){
     for (y=0; y<8; y++){
       if (g_map[x][y] == 1){
-        var map = new Cube();
+        var map = new Cube(new Matrix4(), [1.0, 1.0, 1.0, 1.0], 1);
         map.color = [1.0, 1.0, 1.0, 1.0];
         map.matrix.translate(x-4, -0.75, y-4);
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, texture1);
+        gl.uniform1i(u_Sampler1, 1);
         map.render();
       }
     }
   }
 }
+
+function keydown(ev) {
+  let speed = 0.2;  // Movement speed
+  let rotationSpeed = 5; // Rotation angle in degrees
+
+  // Calculate forward direction based on the current view direction
+  let forwardX = g_at[0] - g_eye[0];
+  let forwardZ = g_at[2] - g_eye[2];
+
+  // Normalize the forward vector
+  let length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
+  if (length > 0) {
+      forwardX /= length;
+      forwardZ /= length;
+  }
+
+  // Compute right direction (perpendicular to forward)
+  let rightX = -forwardZ;
+  let rightZ = forwardX;
+
+  let nextX = g_eye[0];
+  let nextZ = g_eye[2];
+
+  if (ev.keyCode == 87) { // 'W' key (Move Forward)
+      nextX += forwardX * speed;
+      nextZ += forwardZ * speed;
+  }
+  else if (ev.keyCode == 83) { // 'S' key (Move Backward)
+      nextX -= forwardX * speed;
+      nextZ -= forwardZ * speed;
+  }
+  else if (ev.keyCode == 68) { // 'D' key (Move Right)
+      nextX += rightX * speed;
+      nextZ += rightZ * speed;
+  }
+  else if (ev.keyCode == 65) { // 'A' key (Move Left)
+      nextX -= rightX * speed;
+      nextZ -= rightZ * speed;
+  }
+  else if (ev.keyCode == 81) { // 'Q' key (Turn Left)
+      rotateView(-rotationSpeed);
+  }
+  else if (ev.keyCode == 69) { // 'E' key (Turn Right)
+      rotateView(rotationSpeed);
+  }
+
+  // Only update position if no collision is detected
+  if (!checkCollision(nextX, nextZ)) {
+      g_eye[0] = nextX;
+      g_eye[2] = nextZ;
+  }
+
+  renderAllShapes();
+}
+
+
+
+
+
 //Improve Efficency with smaller fewer cubes
 
 var g_camera = new Camera();
@@ -517,39 +550,94 @@ function renderAllShapes(){
   gl.uniformMatrix4fv(u_GlobalRotateMatrix, false, globalRotMat.elements);
     
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  
   renderScene();
 
   // Calculate Performance
   var duration = performance.now() - startTime;
   sendTextToHTML(" ms: "+ Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
+  
+  sendTextToHTML("AWSD to walk\n QE to Turn\n SPACE to Punch ", "numdot2");
 }
 //Display Performance
 function sendTextToHTML(text, htmlID){
+let formattedText = text.replace(/\n/g, "<br>");
+
   var htmlElm = document.getElementById(htmlID);
   if(!htmlElm){
     console.log("Failed to get " + htmlID + " from HTML");
     return;
   }
-  htmlElm.innerHTML = text;
+  htmlElm.innerHTML = formattedText;
 }
 
 function mouseControl() {
   canvas.onmousedown = function(ev) {
       lastMouseX = ev.clientX;
   };
+
   canvas.onmousemove = function(ev) { 
-      if(ev.buttons == 1) { // Detect mouse drag
+      if (ev.buttons == 1) { // Detect mouse drag
           let deltaX = ev.clientX - lastMouseX;
 
           if (Math.abs(deltaX) < 1) {
               return;
           }
-          // Adjust rotation speed
-          g_mouseAngle += deltaX * 0.5; 
+
+          let rotationSpeed = 0.5; // Adjust sensitivity
+          rotateView(deltaX * rotationSpeed); // Use same rotation function
 
           renderAllShapes();
           lastMouseX = ev.clientX; // Update last position
       }
   };
 }
-  
+
+
+function checkCollision(nextX, nextZ) {
+  // Convert world coordinates to grid indices
+  let gridX = Math.floor(nextX + 4);  // Offset since map starts from -4
+  let gridZ = Math.floor(nextZ + 4);
+
+  // Check bounds to prevent out-of-bounds errors
+  if (gridX < 0 || gridX >= g_map.length || gridZ < 0 || gridZ >= g_map[0].length) {
+      return true; // Treat out-of-bounds as a wall
+  }
+
+  // Return true if there is a wall at the next position
+  return g_map[gridX][gridZ] === 1;
+}
+
+function rotateView(angleDegrees) {
+  let angleRadians = angleDegrees * Math.PI / 180; // Convert degrees to radians
+
+  // Calculate direction vector from eye to at
+  let dx = g_at[0] - g_eye[0];
+  let dz = g_at[2] - g_eye[2];
+
+  // Rotate using 2D rotation formula
+  let newDx = dx * Math.cos(angleRadians) - dz * Math.sin(angleRadians);
+  let newDz = dx * Math.sin(angleRadians) + dz * Math.cos(angleRadians);
+
+  // Update `g_at` while keeping `g_eye` the same
+  g_at[0] = g_eye[0] + newDx;
+  g_at[2] = g_eye[2] + newDz;
+}
+function playMusic() {
+  let music = document.getElementById('music');
+  music.volume = 0.5; // Default volume to 50%
+
+  // Try playing the music immediately
+  let playPromise = music.play();
+
+  if (playPromise !== undefined) {
+      playPromise.catch(error => {
+          console.log("Autoplay blocked, waiting for user interaction.");
+          document.body.addEventListener('click', () => {
+              music.play();
+              console.log("Music started after user interaction.");
+          }, { once: true }); // Ensures it plays on the first click
+      });
+  }
+}
+
