@@ -45,7 +45,6 @@ void main() {
     gl_FragColor = color;
 }`
 
-
   // Global Variables
   let canvas;
   let gl;
@@ -60,6 +59,17 @@ void main() {
   let u_Sampler1;
   let u_whichTexture;
   let u_Brightness;
+
+  var g_map = [
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 1, 1, 0, 1, 0, 0, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [1, 0, 1, 0, 1, 1, 0, 1, 1, 1],
+    [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+    [1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
+    [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+  ]
 
   function setUpGL(){
     // Retrieve <canvas> element
@@ -165,7 +175,6 @@ void main() {
         return;
     }
     gl.uniform1f(u_Brightness, 1.0); // Default brightness (1.0 = normal color)
-
   }
 
   //Global Variables related to UI Elements
@@ -195,12 +204,20 @@ void main() {
   let g_wingsAnimation = false;
   let g_legsAnimation = false;
 
+  // Performance Variables 
+  var g_StartTime = performance.now()/1000.0;
+  var g_seconds = performance.now()/1000.0 - g_StartTime;
+
+  //
+  let startTime = Date.now();
+  let isDrawing = true;
+  var g_shapesList = [];
+
   // Set up actions for HTML UI elements
   function addActionsForHtmlUI(){
     // Slider Events
     document.getElementById('speedSlide').addEventListener('input', function() {
       g_speed = parseFloat(this.value); // Scale down if needed
-      console.log("Speed updated:", g_speed);
     });    
       document.getElementById('volumeSlide').addEventListener('input', function(){
       let music = document.getElementById('music');
@@ -213,7 +230,6 @@ void main() {
       renderAllShapes();
   });
   
-      
     //Animation Events
     document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
     document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };
@@ -315,23 +331,12 @@ function main() {
   requestAnimationFrame(tick);
 }
 
-// performance variables 
-var g_StartTime = performance.now()/1000.0;
-var g_seconds = performance.now()/1000.0 - g_StartTime;
-
 function tick(){
   g_seconds = performance.now()/1000.0 - g_StartTime;
-
   updateAnimationAngles();
-
   renderAllShapes();
-  
   requestAnimationFrame(tick);
 }
-
-let startTime = Date.now();
-let isDrawing = true;
-var g_shapesList = [];
 
 function convertCoordinatesEventTOGL(ev){
   var x = ev.clientX; // x coordinate of a mouse pointer
@@ -351,24 +356,11 @@ function updateAnimationAngles(){
     g_legsAnimation = true;
   }
 
-  
-  if (g_headAnimation){
-    g_headAngle = (1 * Math.sin(g_seconds) + 650);
-  }
-
-  if (g_bodyAnimation){
-    g_bodyAngle = -(20 * Math.sin(g_seconds) + 1);
-  }
-  if (g_buttAnimation){
-    g_buttAngle = (30 * Math.sin(g_seconds) + 30);
-  }
-  if (g_wingsAnimation){
-    g_WingAngle = (30 * Math.sin(g_seconds) - 80);
-  }
-  if (g_legsAnimation){
-    g_leg1Angle = (30 * Math.sin(g_seconds) - 10);
-  }
-
+  if (g_headAnimation){ g_headAngle = (1 * Math.sin(g_seconds) + 650); }
+  if (g_bodyAnimation){ g_bodyAngle = -(20 * Math.sin(g_seconds) + 1); }
+  if (g_buttAnimation){ g_buttAngle = (30 * Math.sin(g_seconds) + 30); }
+  if (g_wingsAnimation){ g_WingAngle = (30 * Math.sin(g_seconds) - 80); }
+  if (g_legsAnimation){ g_leg1Angle = (30 * Math.sin(g_seconds) - 10); }
 }
 function renderScene(){ 
   // Draw Body
@@ -376,7 +368,6 @@ function renderScene(){
   bodyMatrix.translate(-0.25, 0, 0.02);
   bodyMatrix.rotate(g_bodyAngle, 1, 0, 0);
   var body = new Cube(new Matrix4(bodyMatrix), [0.5, 0.35, 0.05, 1.0]);
-
   body.matrix.scale(0.3, 0.3, 0.3);
   body.render();
 
@@ -398,7 +389,6 @@ function renderScene(){
   gl.activeTexture(gl.TEXTURE1);
   gl.bindTexture(gl.TEXTURE_2D, texture1);
   gl.uniform1i(u_Sampler1, 1);
-
   head.render();
 
   // Draw Butt
@@ -409,8 +399,6 @@ function renderScene(){
   var butt = new Cube(new Matrix4(buttMatrix), [1, 1, 0, 1.0]);
   butt.matrix.scale(0.3, 0.3, 0.3);
   butt.render();
-
-  // Save butt matrix for stinger
   var buttCoordinateMat = new Matrix4(buttMatrix);
 
   // Draw Wings
@@ -447,7 +435,6 @@ function renderScene(){
   legR.matrix.scale(0.05, 0.2, 0.1);
   legR.render();
 
-  //Draw Background 
   //Draw Sky
   var skyMatrix = new Matrix4();
   skyMatrix.scale(50, 50, 50);
@@ -457,7 +444,6 @@ function renderScene(){
   sky.render();
   
   //Draw Floor
-  
   var floorMatrix = new Matrix4();
   floorMatrix.translate(0, -0.75, 0);
   floorMatrix.scale(10, 0, 10);
@@ -468,16 +454,7 @@ function renderScene(){
   //Draw Walls
   drawMap();
 }
-var g_map = [
-  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-  [1, 0, 0, 1, 1, 0, 1, 0, 0, 1],
-  [1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-  [1, 0, 1, 0, 1, 1, 0, 1, 1, 1],
-  [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
-  [1, 0, 1, 1, 1, 0, 1, 1, 0, 1],
-  [1, 0, 0, 0, 1, 0, 0, 1, 0, 1],
-  [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
-]
+
 function drawMap(){
   for (x=0; x<8; x++){
     for (y=0; y<8; y++){
@@ -518,6 +495,8 @@ function keydown(ev) {
   }
   else if (ev.keyCode == 69) { // 'E' key (Turn Right)
       g_camera.rotate(rotationSpeed);
+  } else if (ev.keyCode == 32) { // 'Space' key (Punch)
+      destroyGrass();
   }
 
   // **Collision Check**
@@ -528,9 +507,6 @@ function keydown(ev) {
   renderAllShapes();
 }
 
-
-
-//Improve Efficency with smaller fewer cubes
 function renderAllShapes(){
   // Check the time at the start of this function
   var startTime = performance.now();
@@ -560,7 +536,7 @@ function renderAllShapes(){
   var duration = performance.now() - startTime;
   sendTextToHTML(" ms: "+ Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
   
-  sendTextToHTML("AWSD to walk\n QE to Turn\n SPACE to Punch ", "numdot2");
+  sendTextToHTML("AWSD to walk\n QE to Turn\n SPACE to Punch. You only get 1 shot", "numdot2");
 }
 //Display Performance
 function sendTextToHTML(text, htmlID){
@@ -575,26 +551,40 @@ let formattedText = text.replace(/\n/g, "<br>");
 }
 
 function mouseControl() {
-  canvas.onmousedown = function(ev) {
-      lastMouseX = ev.clientX;
+  let sensitivity = 0.02; // Adjust rotation speed
+  let isMouseDown = false;
+
+  canvas.onmousedown = function () {
+      isMouseDown = true;
   };
 
-  canvas.onmousemove = function(ev) { 
-      if (ev.buttons == 1) { // Detect mouse drag
-          let deltaX = ev.clientX - lastMouseX;
+  canvas.onmouseup = function () {
+      isMouseDown = false;
+  };
 
-          if (Math.abs(deltaX) < 1) {
-              return;
-          }
+  document.onmousemove = function (ev) {
+      if (!isMouseDown) return; // Stop rotating if mouse button is not held
 
-          let rotationSpeed = 0.5; // Adjust sensitivity
-          rotateView(deltaX * rotationSpeed); // Use same rotation function
+      let deltaX = ev.movementX * sensitivity;
+      let deltaY = ev.movementY * sensitivity;
 
-          renderAllShapes();
-          lastMouseX = ev.clientX; // Update last position
+      // Rotate left/right
+      g_camera.rotate(deltaX * (180 / Math.PI)); // Convert radians to degrees
+
+      // Tilt up/down (limit vertical movement)
+      let pitchLimit = Math.PI / 3; // Limit vertical rotation
+      let pitchAngle = Math.asin(g_camera.at[1] - g_camera.eye[1]); // Current vertical angle
+      let newPitchAngle = pitchAngle - deltaY;
+
+      if (newPitchAngle > -pitchLimit && newPitchAngle < pitchLimit) {
+          g_camera.at[1] -= deltaY;
       }
+
+      renderAllShapes(); // Update the scene
   };
 }
+
+
 
 function checkCollision(nextX, nextZ) {
   // Convert world coordinates to grid indices
@@ -610,21 +600,17 @@ function checkCollision(nextX, nextZ) {
   return g_map[gridX][gridZ] === 1;
 }
 
-function rotateView(angleDegrees) {
-  let angleRadians = angleDegrees * Math.PI / 180; // Convert degrees to radians
-
-  // Calculate direction vector from eye to at
+function rotateView(angleRadians) {
   let dx = g_at[0] - g_eye[0];
   let dz = g_at[2] - g_eye[2];
 
-  // Rotate using 2D rotation formula
   let newDx = dx * Math.cos(angleRadians) - dz * Math.sin(angleRadians);
   let newDz = dx * Math.sin(angleRadians) + dz * Math.cos(angleRadians);
 
-  // Update `g_at` while keeping `g_eye` the same
   g_at[0] = g_eye[0] + newDx;
   g_at[2] = g_eye[2] + newDz;
 }
+
 
 function playMusic() {
   let music = document.getElementById('music');
@@ -640,5 +626,37 @@ function playMusic() {
           }, { once: true }); // Ensures it plays on the first click
       });
   }
+}
+
+let punchUsed = false; // Can only punch once
+
+function destroyGrass() {
+    if (punchUsed) {
+        console.log("You have already used your punch!");
+        return; // Exit function if already used
+    }
+
+    // Get the direction the player is facing
+    let forwardX = g_camera.at[0] - g_camera.eye[0];
+    let forwardZ = g_camera.at[2] - g_camera.eye[2];
+
+    // Normalize the direction vector (for stability)
+    let length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
+    forwardX /= length;
+    forwardZ /= length;
+
+    // Get the block in front of the player
+    let targetX = Math.floor(g_camera.eye[0] + forwardX + 4); // Offset to match g_map
+    let targetZ = Math.floor(g_camera.eye[2] + forwardZ + 4);
+
+    // Ensure within bounds
+    if (targetX >= 0 && targetX < g_map.length && targetZ >= 0 && targetZ < g_map[0].length) {
+        if (g_map[targetX][targetZ] === 1) { // If there is grass
+            console.log("Grass destroyed at:", targetX - 4, targetZ - 4);
+            g_map[targetX][targetZ] = 0; // Remove the grass
+            punchUsed = true; // Disable punching forever
+            renderAllShapes(); // Redraw scene without the removed grass
+        }
+    }
 }
 
