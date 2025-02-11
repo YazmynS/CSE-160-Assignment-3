@@ -182,6 +182,7 @@ void main() {
   let g_mouseAngle = 0;
   let lastMouseX = 0;
   let g_speed = 0.2;
+  let g_goalPosition = RanGoalPos();
   
   // Camera Variables 
   var g_camera = new Camera();
@@ -453,6 +454,14 @@ function renderScene(){
 
   //Draw Walls
   drawMap();
+  
+  //Draw goal cube 
+  if(g_goalPosition)
+  var goalMatrix = new Matrix4();
+  goalMatrix.translate(g_goalPosition.x, g_goalPosition.y, g_goalPosition.z);
+  goalMatrix.scale(0.5, 2, 0.5);
+  var goal = new Cube(goalMatrix, [1.0, 1.0, 0.0, 1.0], -2);
+  goal.render();
 }
 
 function drawMap(){
@@ -502,6 +511,8 @@ function keydown(ev) {
   // **Collision Check**
   if (checkCollision(g_camera.eye[0], g_camera.eye[2])) {
       g_camera.eye = prevEye; // Reset to previous position if collision detected
+  }else if (checkGoalCollision()) { // 🎯 If player reaches goal
+    winGame();
   }
 
   renderAllShapes();
@@ -660,3 +671,37 @@ function destroyGrass() {
     }
 }
 
+function RanGoalPos() {
+  let emptyTiles = [];
+  for (let x = 0; x < g_map.length; x++) {
+      for (let z = 0; z < g_map[0].length; z++) {
+          if (g_map[x][z] === 0) {
+              emptyTiles.push([x, z]);
+          }
+      }
+  }
+  
+  if (emptyTiles.length === 0) {
+      console.log("No empty tiles available!");
+      return;
+  }
+
+  let randomIndex = Math.floor(Math.random() * emptyTiles.length);
+  let [goalX, goalZ] = emptyTiles[randomIndex];
+  return { x: goalX -4, y: -0.5, z: goalZ -4};
+}
+
+function checkGoalCollision() {
+  if (!g_goalPosition) return false; // No goal exists
+
+  let dx = Math.abs(g_camera.eye[0] - g_goalPosition.x); // Distance on X-axis
+
+  return dx <= 4; // 🎯 Win if within 4 units on X-axis
+}
+
+
+function winGame(){
+  gameWon = true;
+  g_MonsterAnimation = false;
+  console.log("You Win!");
+}
