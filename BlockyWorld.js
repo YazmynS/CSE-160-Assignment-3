@@ -190,20 +190,7 @@ void main() {
   var g_at = [0,0,-100];
   var g_up = [0,1,0];
 
-  // Animal Variables
-  let g_headAngle = 0;
-  let g_bodyAngle = 0;
-  let g_buttAngle = 0;
-  let g_WingAngle = 0;
-  let g_leg1Angle = 0;
-
-  // Animation Variables
-  let g_monsterAnimation = false; 
-  let g_headAnimation = false;
-  let g_bodyAnimation = false;
-  let g_buttAnimation = false;
-  let g_wingsAnimation = false;
-  let g_legsAnimation = false;
+ 
 
   // Performance Variables 
   var g_StartTime = performance.now()/1000.0;
@@ -234,8 +221,6 @@ void main() {
     //Animation Events
     document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
     document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };
-    document.getElementById("monsterAniOnButton").onclick = function() { g_monsterAnimation = true; g_headAnimation = true; };
-    document.getElementById("monsterAniOffButton").onclick = function() { g_monsterAnimation = false;  g_headAnimation = false; };
   }
 
   function initTextures() {
@@ -334,7 +319,6 @@ function main() {
 
 function tick(){
   g_seconds = performance.now()/1000.0 - g_StartTime;
-  updateAnimationAngles();
   renderAllShapes();
   requestAnimationFrame(tick);
 }
@@ -350,92 +334,8 @@ function convertCoordinatesEventTOGL(ev){
   return ([x,y]);
 }
 
-function updateAnimationAngles(){
-  if (g_monsterAnimation){
-    g_bodyAnimation = true;
-    g_wingsAnimation = true;
-    g_legsAnimation = true;
-  }
 
-  if (g_headAnimation){ g_headAngle = (1 * Math.sin(g_seconds) + 650); }
-  if (g_bodyAnimation){ g_bodyAngle = -(20 * Math.sin(g_seconds) + 1); }
-  if (g_buttAnimation){ g_buttAngle = (30 * Math.sin(g_seconds) + 30); }
-  if (g_wingsAnimation){ g_WingAngle = (30 * Math.sin(g_seconds) - 80); }
-  if (g_legsAnimation){ g_leg1Angle = (30 * Math.sin(g_seconds) - 10); }
-}
 function renderScene(){ 
-  // Draw Body
-  var bodyMatrix = new Matrix4();
-  bodyMatrix.translate(-0.25, 0, 0.02);
-  bodyMatrix.rotate(g_bodyAngle, 1, 0, 0);
-  var body = new Cube(new Matrix4(bodyMatrix), [0.5, 0.35, 0.05, 1.0]);
-  body.matrix.scale(0.3, 0.3, 0.3);
-  body.render();
-
-  // Save transformed matrices for other parts
-  var bodyCoordinateMat = new Matrix4(bodyMatrix);
-  var bodyCoordinateMat1 = new Matrix4(bodyMatrix);
-  var bodyCoordinateMat2 = new Matrix4(bodyMatrix);
-  var bodyCoordinateMat3 = new Matrix4(bodyMatrix);
-  var bodyCoordinateMat4 = new Matrix4(bodyMatrix);
-  var bodyCoordinateMat5 = new Matrix4(bodyMatrix);
-
-  // Draw Head
-  var headMatrix = new Matrix4(bodyCoordinateMat);
-  headMatrix.translate(0, 0, -0.01);
-  headMatrix.rotate(g_headAngle, 1, 0, 0);
-
-  var head = new Cube(new Matrix4(headMatrix), [1.0, 1.0, 0, 1.0], 1);
-  head.matrix.scale(0.3, 0.3, 0.3);
-  gl.activeTexture(gl.TEXTURE1);
-  gl.bindTexture(gl.TEXTURE_2D, texture1);
-  gl.uniform1i(u_Sampler1, 1);
-  head.render();
-
-  // Draw Butt
-  var buttMatrix = new Matrix4(bodyCoordinateMat1);
-  buttMatrix.translate(0, 0, 0.25);
-  buttMatrix.rotate(g_buttAngle, 1, 0, 0);
-
-  var butt = new Cube(new Matrix4(buttMatrix), [1, 1, 0, 1.0]);
-  butt.matrix.scale(0.3, 0.3, 0.3);
-  butt.render();
-  var buttCoordinateMat = new Matrix4(buttMatrix);
-
-  // Draw Wings
-  var wingLMatrix = new Matrix4(bodyCoordinateMat2);
-  wingLMatrix.translate(0.1, 0.20, 0.0);
-  wingLMatrix.rotate(-g_WingAngle, 0, 0, 1);
-
-  var wingL = new Cube(new Matrix4(wingLMatrix), [1.0, 1.0, 1.0, 1.0]);
-  wingL.matrix.scale(0.1, 0.3, 0.3);
-  wingL.render();
-
-  var wingRMatrix = new Matrix4(bodyCoordinateMat3);
-  wingRMatrix.translate(0.2, 0.30, 0.0);
-  wingRMatrix.rotate(g_WingAngle, 0, 0, 1);
-
-  var wingR = new Cube(new Matrix4(wingRMatrix), [1.0, 1.0, 1.0, 1.0]);
-  wingR.matrix.scale(0.1, 0.3, 0.3);
-  wingR.render();
-
-  // Draw Legs
-  var legLMatrix = new Matrix4(bodyCoordinateMat4);
-  legLMatrix.translate(0.2, -0.10, 0.0);
-  legLMatrix.rotate(-g_leg1Angle, 1, 0, 0);
-
-  var legL = new Cube(new Matrix4(legLMatrix), [0.5, 0.35, 0.05, 1.0]);
-  legL.matrix.scale(0.05, 0.2, 0.1);
-  legL.render();
-
-  var legRMatrix = new Matrix4(bodyCoordinateMat5);
-  legRMatrix.translate(0.04, -0.10, 0.0);
-  legRMatrix.rotate(-g_leg1Angle, 1, 0, 0);
-
-  var legR = new Cube(new Matrix4(legRMatrix), [0.5, 0.35, 0.05, 1.0]);
-  legR.matrix.scale(0.05, 0.2, 0.1);
-  legR.render();
-
   //Draw Sky
   var skyMatrix = new Matrix4();
   skyMatrix.scale(50, 50, 50);
@@ -483,21 +383,27 @@ function drawMap(){
 function keydown(ev) {
   let speed = g_speed;
   let rotationSpeed = 5;
-
+  let walkSound = document.getElementById("walk");
+  let punchSound = document.getElementById("punch");
+  let goalSound = document.getElementById("goal");
   // Store previous position before moving
   let prevEye = [...g_camera.eye];
 
   if (ev.keyCode == 87) { // 'W' key (Move Forward)
       g_camera.forward(speed);
+      playSound(walkSound);
   }
   else if (ev.keyCode == 83) { // 'S' key (Move Backward)
       g_camera.back(speed);
+      playSound(walkSound);
   }
   else if (ev.keyCode == 65) { // 'A' key (Move Left)
       g_camera.left(speed);
+      playSound(walkSound);
   }
   else if (ev.keyCode == 68) { // 'D' key (Move Right)
       g_camera.right(speed);
+      playSound(walkSound);
   }
   else if (ev.keyCode == 81) { // 'Q' key (Turn Left)
       g_camera.rotate(-rotationSpeed);
@@ -506,16 +412,24 @@ function keydown(ev) {
       g_camera.rotate(rotationSpeed);
   } else if (ev.keyCode == 32) { // 'Space' key (Punch)
       destroyGrass();
+      playSound(punchSound);
+
   }
 
   // **Collision Check**
   if (checkCollision(g_camera.eye[0], g_camera.eye[2])) {
       g_camera.eye = prevEye; // Reset to previous position if collision detected
   }else if (checkGoalCollision()) { // 🎯 If player reaches goal
-    winGame();
-  }
-
+      console.log("You got a goal.");
+      let goalSound = document.getElementById("goal");
+      if (!goalSound) {
+        console.error("🚨 Goal sound element NOT found! Check your HTML.");
+      } else {
+        console.log("✅ Playing goal sound...");
+        playSound(goalSound);
+      }
   renderAllShapes();
+}
 }
 
 function renderAllShapes(){
@@ -639,6 +553,22 @@ function playMusic() {
   }
 }
 
+function playSound(audioElement, duration = 2000) { // Default to 2 seconds
+  if (!audioElement) {
+      console.warn("🚨 Audio element not found! Check your HTML IDs.");
+      return; // Prevent errors
+  }
+
+  audioElement.play().catch(error => console.warn("⚠️ Audio play was blocked by the browser:", error));
+
+  // Stop the sound after `duration` milliseconds (2 sec = 2000 ms)
+  setTimeout(() => {
+      audioElement.pause();
+  }, duration);
+}
+
+
+
 let punchUsed = false; // Can only punch once
 
 function destroyGrass() {
@@ -673,35 +603,43 @@ function destroyGrass() {
 
 function RanGoalPos() {
   let emptyTiles = [];
+
   for (let x = 0; x < g_map.length; x++) {
       for (let z = 0; z < g_map[0].length; z++) {
           if (g_map[x][z] === 0) {
-              emptyTiles.push([x, z]);
+              emptyTiles.push({ x, z }); // Store valid positions
           }
       }
   }
-  
+
   if (emptyTiles.length === 0) {
-      console.log("No empty tiles available!");
-      return;
+      console.log("❌ No empty tiles available!");
+      return { x: 0, y: -0.5, z: 0 }; // Default safe position if needed
   }
 
   let randomIndex = Math.floor(Math.random() * emptyTiles.length);
-  let [goalX, goalZ] = emptyTiles[randomIndex];
-  return { x: goalX -4, y: -0.5, z: goalZ -4};
+  let newGoal = emptyTiles[randomIndex];
+
+  console.log(`🆕 New Goal Position: X=${newGoal.x - 4}, Z=${newGoal.z - 4}`);
+
+  return { x: newGoal.x - 4, y: -0.5, z: newGoal.z - 4 };
 }
+
 
 function checkGoalCollision() {
   if (!g_goalPosition) return false; // No goal exists
 
-  let dx = Math.abs(g_camera.eye[0] - g_goalPosition.x); // Distance on X-axis
+  let dx = Math.abs(g_camera.eye[0] - g_goalPosition.x);
+  let dz = Math.abs(g_camera.eye[2] - g_goalPosition.z);
 
-  return dx <= 4; // 🎯 Win if within 4 units on X-axis
+  if (dx <= 0.5 && dz <= 0.5) {
+      console.log("🎯 Goal reached! Respawning...");
+      g_goalPosition = RanGoalPos(); // Generate a new goal position
+      return true;
+  }
+
+  return false;
 }
 
 
-function winGame(){
-  gameWon = true;
-  g_MonsterAnimation = false;
-  console.log("You Win!");
-}
+
