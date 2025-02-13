@@ -201,15 +201,15 @@ void main() {
   // Set up actions for HTML UI elements
   function addActionsForHtmlUI(){
     // Slider Events
-    document.getElementById('speedSlide').addEventListener('input', function() {
+    document.getElementById('speedSlide').addEventListener('change', function() {
       g_speed = parseFloat(this.value); // Scale down if needed
     });    
-      document.getElementById('volumeSlide').addEventListener('input', function(){
+      document.getElementById('volumeSlide').addEventListener('change', function(){
       let music = document.getElementById('music');
       let volumeValue = parseFloat(this.value) / 100; // Convert to 0.0 - 1.0
       music.volume = volumeValue;    
     });
-    document.getElementById('brightnessSlide').addEventListener('input', function() { 
+    document.getElementById('brightnessSlide').addEventListener('change', function() { 
       let brightnessValue = parseFloat(this.value); // No need to divide
       gl.uniform1f(u_Brightness, brightnessValue);
       renderAllShapes();
@@ -217,9 +217,10 @@ void main() {
   
     //Hint Event
     document.getElementById("hintAniOnButton").addEventListener("click", function(){
+      let prevHint = g_hint;
       g_hint = !g_hint;
-      renderAllShapes();
-    }) 
+      if (prevHint !== g_hint) { renderAllShapes(); }
+    })
   }
 
   function initTextures() {
@@ -354,15 +355,16 @@ function renderScene(){
 }
 
 function drawMap(){
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, texture1);
+  gl.uniform1i(u_Sampler1, 1);
+  
   for (x=0; x<8; x++){
     for (y=0; y<8; y++){
       if (g_map[x][y] == 1){
         var map = new Cube(new Matrix4(), [1.0, 1.0, 1.0, 1.0], 1);
         map.color = [1.0, 1.0, 1.0, 1.0];
-        map.matrix.translate(x-4, -0.75, y-4);
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, texture1);
-        gl.uniform1i(u_Sampler1, 1);
+        map.matrix.translate(x-4, -0.75, y-4);  
         map.render();
       }
     }
@@ -378,32 +380,32 @@ function keydown(ev) {
   // Store previous position before moving
   let prevEye = [...g_camera.eye];
 
-  if (ev.keyCode == 87) { // 'W' key (Move Forward)
-      g_camera.forward(speed);
-      playSound(walkSound);
+  //W Key
+  if (ev.keyCode == 87) { g_camera.forward(speed); }
+  //S Key
+  else if (ev.keyCode == 83) {  g_camera.back(speed); }
+  //A Key
+  else if (ev.keyCode == 65) { g_camera.left(speed); }
+  //D Key
+  else if (ev.keyCode == 68) { g_camera.right(speed); }
+  //Q Key
+  else if (ev.keyCode == 81) { 
+    g_camera.rotate(-rotationSpeed);
+    renderAllShapes();
   }
-  else if (ev.keyCode == 83) { // 'S' key (Move Backward)
-      g_camera.back(speed);
-      playSound(walkSound);
-  }
-  else if (ev.keyCode == 65) { // 'A' key (Move Left)
-      g_camera.left(speed);
-      playSound(walkSound);
-  }
-  else if (ev.keyCode == 68) { // 'D' key (Move Right)
-      g_camera.right(speed);
-      playSound(walkSound);
-  }
-  else if (ev.keyCode == 81) { // 'Q' key (Turn Left)
-      g_camera.rotate(-rotationSpeed);
-  }
-  else if (ev.keyCode == 69) { // 'E' key (Turn Right)
-      g_camera.rotate(rotationSpeed);
-  } else if (ev.keyCode == 32) { // 'Space' key (Punch)
+  //E Key
+  else if (ev.keyCode == 69) { 
+    g_camera.rotate(rotationSpeed);
+    renderAllShapes();
+  } 
+  // SPACE Key
+  else if (ev.keyCode == 32) { // 'Space' key (Punch)
       destroyGrass();
       playSound(punchSound);
-
   }
+  //Play sound if player moves
+  if (!aEqual(prevEye, g_camera.eye)) { playSound(walkSound); }
+  function aEqual(a,b){ return a.length === b.length && a.every((v,i)=> v === b[i]); }
 
   // **Collision Check**
   if (checkCollision(g_camera.eye[0], g_camera.eye[2])) {
@@ -444,7 +446,6 @@ function renderAllShapes(){
   // Calculate Performance
   var duration = performance.now() - startTime;
   sendTextToHTML(" ms: "+ Math.floor(duration) + " fps: " + Math.floor(10000/duration), "numdot");
-  
   sendTextToHTML("AWSD to walk\n QE to Turn\n SPACE to Punch. You only get 1 shot", "numdot2");
 }
 //Display Performance

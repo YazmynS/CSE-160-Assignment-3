@@ -3,20 +3,23 @@ class Camera {
         this.eye = [0, 0, 3];   // Camera position
         this.at = [0, 0, -100]; // Where the camera is looking
         this.up = [0, 1, 0];    // Up direction
+
+        this.direction = [0, 0]; // Shared movement vector
     }
 
-    forward(speed) {
-        let forwardX = this.at[0] - this.eye[0];
-        let forwardZ = this.at[2] - this.eye[2];
-        let length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
+    move(speed, direction) {
+        // Compute movement direction once
+        this.direction[0] = this.at[0] - this.eye[0]; // forwardX
+        this.direction[1] = this.at[2] - this.eye[2]; // forwardZ
 
+        let length = Math.sqrt(this.direction[0] ** 2 + this.direction[1] ** 2);
         if (length > 0) {
-            forwardX /= length;
-            forwardZ /= length;
+            this.direction[0] /= length;
+            this.direction[1] /= length;
         }
 
-        let nextX = this.eye[0] + forwardX * speed;
-        let nextZ = this.eye[2] + forwardZ * speed;
+        let nextX = this.eye[0] + this.direction[0] * speed * direction;
+        let nextZ = this.eye[2] + this.direction[1] * speed * direction;
 
         if (!checkCollision(nextX, nextZ)) {
             this.eye[0] = nextX;
@@ -24,32 +27,14 @@ class Camera {
         }
     }
 
-    back(speed) {
-        let forwardX = this.at[0] - this.eye[0];
-        let forwardZ = this.at[2] - this.eye[2];
-        let length = Math.sqrt(forwardX * forwardX + forwardZ * forwardZ);
-
-        if (length > 0) {
-            forwardX /= length;
-            forwardZ /= length;
-        }
-
-        let nextX = this.eye[0] - forwardX * speed;
-        let nextZ = this.eye[2] - forwardZ * speed;
-
-        if (!checkCollision(nextX, nextZ)) {
-            this.eye[0] = nextX;
-            this.eye[2] = nextZ;
-        }
-    }
+    forward(speed) { this.move(speed, 1); } // Move forward
+    back(speed) { this.move(speed, -1); }  // Move backward
 
     left(speed) {
-        let forwardX = this.at[0] - this.eye[0];
-        let forwardZ = this.at[2] - this.eye[2];
-        let rightX = -forwardZ;
-        let rightZ = forwardX;
-        let length = Math.sqrt(rightX * rightX + rightZ * rightZ);
+        let rightX = this.at[2] - this.eye[2]; // Compute perpendicular vector
+        let rightZ = -(this.at[0] - this.eye[0]);
 
+        let length = Math.sqrt(rightX ** 2 + rightZ ** 2);
         if (length > 0) {
             rightX /= length;
             rightZ /= length;
@@ -65,12 +50,10 @@ class Camera {
     }
 
     right(speed) {
-        let forwardX = this.at[0] - this.eye[0];
-        let forwardZ = this.at[2] - this.eye[2];
-        let rightX = -forwardZ;
-        let rightZ = forwardX;
-        let length = Math.sqrt(rightX * rightX + rightZ * rightZ);
+        let rightX = this.at[2] - this.eye[2]; // Compute perpendicular vector
+        let rightZ = -(this.at[0] - this.eye[0]);
 
+        let length = Math.sqrt(rightX ** 2 + rightZ ** 2);
         if (length > 0) {
             rightX /= length;
             rightZ /= length;
