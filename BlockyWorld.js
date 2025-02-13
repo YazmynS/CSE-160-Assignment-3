@@ -381,13 +381,25 @@ function keydown(ev) {
   let prevEye = [...g_camera.eye];
 
   //W Key
-  if (ev.keyCode == 87) { g_camera.forward(speed); }
+  if (ev.keyCode == 87) { 
+    g_camera.forward(speed); 
+    renderAllShapes();
+  }
   //S Key
-  else if (ev.keyCode == 83) {  g_camera.back(speed); }
+  else if (ev.keyCode == 83) {
+    g_camera.back(speed);
+    renderAllShapes();
+  }
   //A Key
-  else if (ev.keyCode == 65) { g_camera.left(speed); }
+  else if (ev.keyCode == 65) {
+    g_camera.left(speed); 
+    renderAllShapes();
+  }
   //D Key
-  else if (ev.keyCode == 68) { g_camera.right(speed); }
+  else if (ev.keyCode == 68) {
+    g_camera.right(speed);
+    renderAllShapes();
+  }
   //Q Key
   else if (ev.keyCode == 81) { 
     g_camera.rotate(-rotationSpeed);
