@@ -174,7 +174,7 @@ void main() {
         console.log('Failed to get the storage location of u_Brightness');
         return;
     }
-    gl.uniform1f(u_Brightness, 1.0); // Default brightness (1.0 = normal color)
+    gl.uniform1f(u_Brightness, 1.0); // Default brightness
   }
 
   //Global Variables related to UI Elements
@@ -190,13 +190,9 @@ void main() {
   var g_at = [0,0,-100];
   var g_up = [0,1,0];
 
- 
-
   // Performance Variables 
   var g_StartTime = performance.now()/1000.0;
   var g_seconds = performance.now()/1000.0 - g_StartTime;
-
-  //
   let startTime = Date.now();
   let isDrawing = true;
   var g_shapesList = [];
@@ -219,8 +215,8 @@ void main() {
   });
   
     //Animation Events
-    document.getElementById("wallAniOnButton").onclick = function() { g_headAnimation = true; };
-    document.getElementById("wallAniOffButton").onclick = function() { g_headAnimation = false; };
+    document.getElementById("hintAniOnButton").onclick = function() { g_headAnimation = true; };
+    document.getElementById("hintAniOffButton").onclick = function() { g_headAnimation = false; };
   }
 
   function initTextures() {
@@ -311,16 +307,13 @@ function main() {
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
 
-  setTimeout(playMusic, 1000); // Auto-play background music
-
-  // get animations
-  requestAnimationFrame(tick);
+  // Auto-play background music
+  setTimeout(playMusic, 1000); 
 }
 
 function tick(){
   g_seconds = performance.now()/1000.0 - g_StartTime;
   renderAllShapes();
-  requestAnimationFrame(tick);
 }
 
 function convertCoordinatesEventTOGL(ev){
@@ -330,10 +323,8 @@ function convertCoordinatesEventTOGL(ev){
 
   x = ((x - rect.left) - canvas.width/2)/(canvas.width/2);
   y = (canvas.height/2 - (y - rect.top))/(canvas.height/2);
-
   return ([x,y]);
 }
-
 
 function renderScene(){ 
   //Draw Sky
@@ -422,12 +413,8 @@ function keydown(ev) {
   }else if (checkGoalCollision()) { // 🎯 If player reaches goal
       console.log("You got a goal.");
       let goalSound = document.getElementById("goal");
-      if (!goalSound) {
-        console.error("🚨 Goal sound element NOT found! Check your HTML.");
-      } else {
-        console.log("✅ Playing goal sound...");
-        playSound(goalSound);
-      }
+      if (!goalSound) { console.error("Goal sound not found!"); }
+      else { playSound(goalSound); }
   renderAllShapes();
 }
 }
@@ -509,8 +496,6 @@ function mouseControl() {
   };
 }
 
-
-
 function checkCollision(nextX, nextZ) {
   // Convert world coordinates to grid indices
   let gridX = Math.floor(nextX + 4);  // Offset since map starts from -4
@@ -528,7 +513,6 @@ function checkCollision(nextX, nextZ) {
 function rotateView(angleRadians) {
   let dx = g_at[0] - g_eye[0];
   let dz = g_at[2] - g_eye[2];
-
   let newDx = dx * Math.cos(angleRadians) - dz * Math.sin(angleRadians);
   let newDz = dx * Math.sin(angleRadians) + dz * Math.cos(angleRadians);
 
@@ -536,19 +520,16 @@ function rotateView(angleRadians) {
   g_at[2] = g_eye[2] + newDz;
 }
 
-
 function playMusic() {
   let music = document.getElementById('music');
-  music.volume = 0.5; // Default volume to 50%
-
-  // Try playing the music immediately
+  music.volume = 0.5;
   let autoPlay = music.play();
 
   if (autoPlay !== undefined) {
       autoPlay.catch(error => {
           document.body.addEventListener('click', () => {
               music.play();
-          }, { once: true }); // Ensures it plays on the first click
+          }, { once: true });
       });
   }
 }
@@ -558,7 +539,6 @@ function playSound(audioElement, duration = 2000) { // Default to 2 seconds
       console.warn("🚨 Audio element not found! Check your HTML IDs.");
       return; // Prevent errors
   }
-
   audioElement.play().catch(error => console.warn("⚠️ Audio play was blocked by the browser:", error));
 
   // Stop the sound after `duration` milliseconds (2 sec = 2000 ms)
@@ -567,10 +547,7 @@ function playSound(audioElement, duration = 2000) { // Default to 2 seconds
   }, duration);
 }
 
-
-
 let punchUsed = false; // Can only punch once
-
 function destroyGrass() {
     if (punchUsed) {
         console.log("You have already used your punch!");
@@ -613,7 +590,7 @@ function RanGoalPos() {
   }
 
   if (emptyTiles.length === 0) {
-      console.log("❌ No empty tiles available!");
+      console.log("No empty tiles available!");
       return { x: 0, y: -0.5, z: 0 }; // Default safe position if needed
   }
 
@@ -621,7 +598,6 @@ function RanGoalPos() {
   let newGoal = emptyTiles[randomIndex];
 
   console.log(`🆕 New Goal Position: X=${newGoal.x - 4}, Z=${newGoal.z - 4}`);
-
   return { x: newGoal.x - 4, y: -0.5, z: newGoal.z - 4 };
 }
 
@@ -633,11 +609,10 @@ function checkGoalCollision() {
   let dz = Math.abs(g_camera.eye[2] - g_goalPosition.z);
 
   if (dx <= 0.5 && dz <= 0.5) {
-      console.log("🎯 Goal reached! Respawning...");
+      console.log("Goal reached! Respawning...");
       g_goalPosition = RanGoalPos(); // Generate a new goal position
       return true;
   }
-
   return false;
 }
 
