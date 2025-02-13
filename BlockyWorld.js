@@ -183,6 +183,7 @@ void main() {
   let lastMouseX = 0;
   let g_speed = 0.2;
   let g_goalPosition = RanGoalPos();
+  let g_hint = false;
   
   // Camera Variables 
   var g_camera = new Camera();
@@ -214,9 +215,11 @@ void main() {
       renderAllShapes();
   });
   
-    //Animation Events
-    document.getElementById("hintAniOnButton").onclick = function() { g_headAnimation = true; };
-    document.getElementById("hintAniOffButton").onclick = function() { g_headAnimation = false; };
+    //Hint Event
+    document.getElementById("hintAniOnButton").addEventListener("click", function(){
+      g_hint = !g_hint;
+      renderAllShapes();
+    }) 
   }
 
   function initTextures() {
@@ -244,16 +247,17 @@ void main() {
     wallImage.onload = function(){ 
       sendImageToTEXTURE1(wallImage); 
     };
+
     // Tell the browser to load an image
     wallImage.src = './textures/grass.jpg';
-  
     return true;
   }
   let texture, texture1;
   function sendImageToTEXTURE0(floorImage) {
     texture = gl.createTexture();   // Create a texture object
-    if (!texture) {
-      return false;
+    if (!texture) { 
+      console.log("Failed to get texture object.");
+      return false; 
     }
     
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip the image's y axis
@@ -261,12 +265,10 @@ void main() {
     gl.activeTexture(gl.TEXTURE0);
     // Bind the texture object to the target
     gl.bindTexture(gl.TEXTURE_2D, texture);
-  
     // Set the texture parameters
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     // Set the texture image
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, floorImage);
-    
     // Set the texture unit 0 to the sampler
     gl.uniform1i(u_Sampler0, 0);
   }
@@ -276,6 +278,7 @@ void main() {
       
       texture1 = gl.createTexture();   // Create a texture object
       if (!texture1) {
+        console.log("Failed to get texture object");
         return false;
       }
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
@@ -289,24 +292,17 @@ void main() {
 function main() {  
   // Set up canvas and gl varaibles 
   setUpGL();
-
   // Set up GLSL shader program and connect GLSL variables
   connectVariablesToGLSL();
-  
   document.onkeydown = keydown;
-
   // Set up actions for the HTML UI elements
   addActionsForHtmlUI();
-
   // Set up textures
   initTextures();
-
   //Set up mouse rotation
   mouseControl(); 
-
   // Specify the color for clearing <canvas>
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
-
   // Auto-play background music
   setTimeout(playMusic, 1000); 
 }
@@ -347,12 +343,14 @@ function renderScene(){
   drawMap();
   
   //Draw goal cube 
-  if(g_goalPosition)
-  var goalMatrix = new Matrix4();
-  goalMatrix.translate(g_goalPosition.x, g_goalPosition.y, g_goalPosition.z);
-  goalMatrix.scale(0.5, 2, 0.5);
-  var goal = new Cube(goalMatrix, [1.0, 1.0, 0.0, 1.0], -2);
-  goal.render();
+  if(g_goalPosition){
+    let goalHeight = g_hint ? 2.0 : 0.5;
+    var goalMatrix = new Matrix4();
+    goalMatrix.translate(g_goalPosition.x, g_goalPosition.y, g_goalPosition.z);
+    goalMatrix.scale(0.5, goalHeight, 0.5);
+    var goal = new Cube(goalMatrix, [1.0, 1.0, 0.0, 1.0], -2);
+    goal.render();
+  }
 }
 
 function drawMap(){
@@ -411,7 +409,6 @@ function keydown(ev) {
   if (checkCollision(g_camera.eye[0], g_camera.eye[2])) {
       g_camera.eye = prevEye; // Reset to previous position if collision detected
   }else if (checkGoalCollision()) { // 🎯 If player reaches goal
-      console.log("You got a goal.");
       let goalSound = document.getElementById("goal");
       if (!goalSound) { console.error("Goal sound not found!"); }
       else { playSound(goalSound); }
@@ -466,17 +463,11 @@ function mouseControl() {
   let sensitivity = 0.02; // Adjust rotation speed
   let isMouseDown = false;
 
-  canvas.onmousedown = function () {
-      isMouseDown = true;
-  };
-
-  canvas.onmouseup = function () {
-      isMouseDown = false;
-  };
+  canvas.onmousedown = function () { isMouseDown = true; };
+  canvas.onmouseup = function () { isMouseDown = false; };
 
   document.onmousemove = function (ev) {
       if (!isMouseDown) return; // Stop rotating if mouse button is not held
-
       let deltaX = ev.movementX * sensitivity;
       let deltaY = ev.movementY * sensitivity;
 
@@ -488,10 +479,7 @@ function mouseControl() {
       let pitchAngle = Math.asin(g_camera.at[1] - g_camera.eye[1]); // Current vertical angle
       let newPitchAngle = pitchAngle - deltaY;
 
-      if (newPitchAngle > -pitchLimit && newPitchAngle < pitchLimit) {
-          g_camera.at[1] -= deltaY;
-      }
-
+      if (newPitchAngle > -pitchLimit && newPitchAngle < pitchLimit) { g_camera.at[1] -= deltaY; }
       renderAllShapes(); // Update the scene
   };
 }
@@ -502,9 +490,7 @@ function checkCollision(nextX, nextZ) {
   let gridZ = Math.floor(nextZ + 4);
 
   // Check bounds to prevent out-of-bounds errors
-  if (gridX < 0 || gridX >= g_map.length || gridZ < 0 || gridZ >= g_map[0].length) {
-      return true; // Treat out-of-bounds as a wall
-  }
+  if (gridX < 0 || gridX >= g_map.length || gridZ < 0 || gridZ >= g_map[0].length) { return true; }
 
   // Return true if there is a wall at the next position
   return g_map[gridX][gridZ] === 1;
@@ -536,10 +522,10 @@ function playMusic() {
 
 function playSound(audioElement, duration = 2000) { // Default to 2 seconds
   if (!audioElement) {
-      console.warn("🚨 Audio element not found! Check your HTML IDs.");
+      console.log("Audio element not found.");
       return; // Prevent errors
   }
-  audioElement.play().catch(error => console.warn("⚠️ Audio play was blocked by the browser:", error));
+  audioElement.play().catch(error => console.log("Audio play was blocked by the browser:", error));
 
   // Stop the sound after `duration` milliseconds (2 sec = 2000 ms)
   setTimeout(() => {
@@ -615,6 +601,3 @@ function checkGoalCollision() {
   }
   return false;
 }
-
-
-
